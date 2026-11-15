@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Perfil e info básica: cualquier usuario autenticado puede leer (búsqueda de amigos)
+    // Solo el propio usuario puede escribir
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Juegos: el propietario escribe, amigos autenticados pueden leer para comparar
+      match /juegos/{gameId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Lista de amigos aceptados
+      // El dueño puede leer/escribir su propia lista.
+      // Un amigo puede escribir/borrar el documento cuyo ID es su propio UID
+      // (necesario para el batch write de acceptRequest y removeFriend).
+      match /friends/{friendId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null &&
+          (request.auth.uid == userId || request.auth.uid == friendId);
+      }
+    }
+
+    // Solicitudes de amistad
+    match /friendRequests/{requestId} {
+      // El emisor o el receptor pueden leer
+      allow read: if request.auth != null && (
+        resource.data.senderId == request.auth.uid ||
+        resource.data.receiverId == request.auth.uid
+      );
+      // Solo el emisor puede crear (y debe ser él mismo)
+      allow create: if request.auth != null
+                    && request.resource.data.senderId == request.auth.uid;
+      // Solo el receptor puede actualizar el status (aceptar/rechazar)
+      // El emisor también puede leer sus propias solicitudes enviadas
+      allow update: if request.auth != null && (
+        resource.data.receiverId == request.auth.uid ||
+        resource.data.senderId == request.auth.uid
+      );
+    }
+
+    // Denegar todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
