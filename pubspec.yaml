@@ -24,6 +24,7 @@ dependencies:
 
   # Image
   image_picker: ^1.1.2
+  gal: ^2.3.2
 
   # Preferences
   shared_preferences: ^2.3.2

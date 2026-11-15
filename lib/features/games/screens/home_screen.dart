@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/utils/image_utils.dart';
+import '../../../core/utils/pagination.dart';
 import '../../../core/widgets/empty_state_widget.dart';
+import '../../../core/widgets/pagination_bar.dart';
 import '../../../core/widgets/shimmer_card.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../profile/models/user_model.dart';
@@ -28,6 +30,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   GameCategory _filter = GameCategory.all;
   final _searchCtrl = TextEditingController();
   String _query = '';
+  int _page = 0;
+  final _scrollCtrl = ScrollController();
 
   late final AnimationController _bgController;
 
@@ -44,6 +48,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void dispose() {
     _bgController.dispose();
     _searchCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -57,6 +62,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       list = list.where((g) => g.nombre.toLowerCase().contains(q)).toList();
     }
     return list;
+  }
+
+  void _goToPage(int page) {
+    setState(() => _page = page);
+    if (_scrollCtrl.hasClients) {
+      _scrollCtrl.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _openAdd() => showModalBottomSheet(
@@ -155,21 +171,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildBody(List<GameModel> all) {
     final filtered = _applyFilters(all);
+    final pageData = paginate(filtered, _page);
     return CustomScrollView(
+      controller: _scrollCtrl,
       slivers: [
         SliverToBoxAdapter(child: _StatsCard(games: all)),
         SliverToBoxAdapter(child: _SearchBar(
           controller: _searchCtrl,
-          onChanged: (v) => setState(() => _query = v),
+          onChanged: (v) => setState(() {
+            _query = v;
+            _page = 0;
+          }),
           onClear: () {
             _searchCtrl.clear();
-            setState(() => _query = '');
+            setState(() {
+              _query = '';
+              _page = 0;
+            });
           },
           hasQuery: _query.isNotEmpty,
         )),
         SliverToBoxAdapter(child: _FilterChips(
           selected: _filter,
-          onSelect: (c) => setState(() => _filter = c),
+          onSelect: (c) => setState(() {
+            _filter = c;
+            _page = 0;
+          }),
           games: all,
         )),
         if (filtered.isEmpty)
@@ -188,16 +215,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       : 'Cambia el filtro o agrega juegos en esta categoría.',
             ),
           )
-        else
+        else ...[
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
             sliver: SliverGrid(
               delegate: SliverChildBuilderDelegate(
                 (_, i) => GameCardWidget(
-                  game: filtered[i],
-                  onEdit: () => _openEdit(filtered[i]),
+                  game: pageData.items[i],
+                  onEdit: () => _openEdit(pageData.items[i]),
                 ),
-                childCount: filtered.length,
+                childCount: pageData.items.length,
               ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -207,6 +234,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
           ),
+          SliverToBoxAdapter(
+            child: Padding(
+              // Espacio inferior para que el botón flotante no tape los controles
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+              child: pageData.totalPages > 1
+                  ? PaginationBar(
+                      page: pageData.page,
+                      totalPages: pageData.totalPages,
+                      onPrevious: pageData.hasPrevious
+                          ? () => _goToPage(pageData.page - 1)
+                          : null,
+                      onNext: pageData.hasNext
+                          ? () => _goToPage(pageData.page + 1)
+                          : null,
+                    )
+                  : null,
+            ),
+          ),
+        ],
       ],
     );
   }

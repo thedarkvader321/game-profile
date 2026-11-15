@@ -49,6 +49,8 @@
 	</dict>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Necesitamos acceso a tu galería para seleccionar la portada del juego y tu foto de perfil.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Necesitamos permiso para guardar la carátula del juego en tu galería.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Necesitamos acceso a tu cámara para tomar una foto de perfil.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

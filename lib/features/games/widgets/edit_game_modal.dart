@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/gallery_saver.dart';
 import '../../../core/utils/image_utils.dart';
+import '../../../core/utils/modal_utils.dart';
 import '../data/games_repository.dart';
 import '../models/game_model.dart';
 import 'modal_shared.dart';
@@ -21,6 +23,8 @@ class _EditGameModalState extends ConsumerState<EditGameModal> {
   late GameCategory _category;
   late String _imageBase64;
   bool _loading = false;
+  bool _savingImage = false;
+  SaveImageResult? _saveResult;
 
   @override
   void initState() {
@@ -38,7 +42,25 @@ class _EditGameModalState extends ConsumerState<EditGameModal> {
 
   Future<void> _pickImage() async {
     final b64 = await ImageUtils.pickImageAsBase64();
-    if (b64 != null) setState(() => _imageBase64 = b64);
+    if (b64 != null) {
+      setState(() {
+        _imageBase64 = b64;
+        _saveResult = null;
+      });
+    }
+  }
+
+  Future<void> _saveImageToGallery() async {
+    setState(() {
+      _savingImage = true;
+      _saveResult = null;
+    });
+    final result = await GallerySaver.saveBase64(_imageBase64);
+    if (!mounted) return;
+    setState(() {
+      _savingImage = false;
+      _saveResult = result;
+    });
   }
 
   Future<void> _save() async {
@@ -128,11 +150,12 @@ class _EditGameModalState extends ConsumerState<EditGameModal> {
         left: 24,
         right: 24,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+        bottom: modalBottomPadding(context),
       ),
       child: Form(
         key: _formKey,
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -240,6 +263,39 @@ class _EditGameModalState extends ConsumerState<EditGameModal> {
                       ),
               ),
             ),
+
+            if (imageBytes != null) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  key: const Key('save_cover_button'),
+                  onPressed: (_savingImage || _loading) ? null : _saveImageToGallery,
+                  icon: _savingImage
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.download_rounded, size: 18),
+                  label: const Text('Guardar carátula en la galería'),
+                ),
+              ),
+              if (_saveResult != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    GallerySaver.messageFor(_saveResult!),
+                    style: GoogleFonts.nunitoSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _saveResult == SaveImageResult.saved
+                          ? AppColors.success
+                          : AppColors.error,
+                    ),
+                  ),
+                ),
+            ],
             const SizedBox(height: 24),
 
             Row(
@@ -269,6 +325,7 @@ class _EditGameModalState extends ConsumerState<EditGameModal> {
               ],
             ),
           ],
+          ),
         ),
       ),
     );

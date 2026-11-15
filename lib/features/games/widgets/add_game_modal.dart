@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/image_utils.dart';
+import '../../../core/utils/modal_utils.dart';
 import '../data/games_repository.dart';
 import '../models/game_model.dart';
 import 'modal_shared.dart';
@@ -69,7 +70,7 @@ class _AddGameModalState extends ConsumerState<AddGameModal> {
         left: 24,
         right: 24,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+        bottom: modalBottomPadding(context),
       ),
       child: Form(
         key: _formKey,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/image_utils.dart';
+import '../../../core/utils/modal_utils.dart';
 import '../data/profile_repository.dart';
 import '../models/user_model.dart';
 
@@ -76,7 +77,7 @@ class _EditProfileBottomSheetState
         left: 24,
         right: 24,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+        bottom: modalBottomPadding(context, extra: 32),
       ),
       child: Form(
         key: _formKey,
